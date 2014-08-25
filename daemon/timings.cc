@@ -6,21 +6,19 @@
 #include <string.h>
 #include <sstream>
 
-#ifdef HAVE_ATOMIC
-#include <atomic>
 typedef struct timings_st {
     /* We collect timings for <=1 us */
-    std::atomic<uint32_t> ns;
+    uint32_t ns;
 
     /* We collect timings per 10usec */
-    std::atomic<uint32_t> usec[100];
+    uint32_t usec[100];
 
     /* we collect timings from 0-49 ms (entry 0 is never used!) */
-    std::atomic<uint32_t> msec[50];
+    uint32_t msec[50];
 
-    std::atomic<uint32_t> halfsec[10];
+    uint32_t halfsec[10];
 
-    std::atomic<uint32_t> wayout;
+    uint32_t wayout;
 } timings_t;
 
 timings_t timings[0x100];
@@ -49,43 +47,38 @@ void initialize_timings(void)
 {
     int ii, jj;
     for (ii = 0; ii < 0x100; ++ii) {
-        timings[ii].ns.store(0);
+        timings[ii].ns = 0;
         for (jj = 0; jj < 100; ++jj) {
-            timings[ii].usec[jj].store(0);
+            timings[ii].usec[jj] = 0;
         }
         for (jj = 0; jj < 50; ++jj) {
-            timings[ii].msec[jj].store(0);
+            timings[ii].msec[jj] = 0;
         }
         for (jj = 0; jj < 10; ++jj) {
-            timings[ii].halfsec[jj].store(0);
+            timings[ii].halfsec[jj] = 0;
         }
-        timings[ii].wayout.store(0);
+        timings[ii].wayout = 0;
     }
 }
-#endif
 
 void generate_timings(uint8_t opcode, const void *cookie)
 {
     std::stringstream ss;
-#ifdef HAVE_ATOMIC
     timings_t *t = &timings[opcode];
 
-    ss << "{\"ns\":" << t->ns.load() << ",\"us\":[";
+    ss << "{\"ns\":" << t->ns << ",\"us\":[";
     for (int ii = 0; ii < 99; ++ii) {
-        ss << t->usec[ii].load() << ",";
+        ss << t->usec[ii] << ",";
     }
-    ss << t->usec[99].load() << "],\"ms\":[";
+    ss << t->usec[99] << "],\"ms\":[";
     for (int ii = 1; ii < 49; ++ii) {
-        ss << t->msec[ii].load() << ",";
+        ss << t->msec[ii] << ",";
     }
-    ss << t->msec[49].load() << "],\"500ms\":[";
+    ss << t->msec[49] << "],\"500ms\":[";
     for (int ii = 0; ii < 9; ++ii) {
-        ss << t->halfsec[ii].load() << ",";
+        ss << t->halfsec[ii] << ",";
     }
-    ss << t->halfsec[9].load() << "],\"wayout\":" << t->wayout.load() << "}";
-#else
-    ss << "{\"error\":\"The server was built without timings support\"}";
-#endif
+    ss << t->halfsec[9] << "],\"wayout\":" << t->wayout << "}";
     std::string str = ss.str();
 
     binary_response_handler(NULL, 0, NULL, 0, str.data(), str.length(),
